@@ -1,0 +1,31 @@
+// This Pine Script® code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © darriuschetty24
+//@version=5
+strategy("BTC_Original_Strateg", overlay=true, default_qty_type=strategy.percent_of_equity, default_qty_value=10)
+
+// Moving Averages
+fastMA = ta.sma(close, 20)
+slowMA = ta.sma(close, 50)
+
+plot(fastMA, color=color.blue, title="Fast MA (20)")
+plot(slowMA, color=color.red, title="Slow MA (50)")
+
+// RSI
+rsiValue = ta.rsi(close, 14)
+plot(rsiValue, title="RSI", color=color.purple)
+
+// Volume
+avgVolume = ta.sma(volume, 20)
+highVolume = volume > avgVolume
+
+// Buy and Sell Conditions
+buyCondition = (fastMA > slowMA) and (rsiValue > 50) and (highVolume == true)
+sellCondition = ta.crossunder(fastMA, slowMA)
+
+// Execute Trades with Stop Loss and Take Profit
+if (buyCondition)
+    strategy.entry("Buy", strategy.long)
+    strategy.exit("Exit", "Buy", stop = close * 0.98, limit = close * 1.03)
+
+if (sellCondition)
+    strategy.close("Buy")
