@@ -1,0 +1,74 @@
+// This Pine Script® code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © darriuschetty24
+
+//@version=5
+strategy("HYPE Breakout Strategy v1", overlay=true, default_qty_type=strategy.percent_of_equity, default_qty_value=10)
+
+// ============================
+// 1. Bollinger Bands - Detect Squeeze
+// ============================
+bbLength = 20
+bbMult = 2.0
+bbMiddle = ta.sma(close, bbLength)
+bbUpper = bbMiddle + bbMult * ta.stdev(close, bbLength)
+bbLower = bbMiddle - bbMult * ta.stdev(close, bbLength)
+
+plot(bbMiddle, color=color.yellow, title="BB Middle")
+plot(bbUpper, color=color.blue, title="BB Upper")
+plot(bbLower, color=color.blue, title="BB Lower")
+
+// ============================
+// 2. Bollinger Band Width - Measures Squeeze
+// ============================
+bbWidth = (bbUpper - bbLower) / bbMiddle
+bbWidthMA = ta.sma(bbWidth, 20)
+isSqueeze = bbWidth < bbWidthMA
+
+// ============================
+// 3. EMA - Trend Direction
+// ============================
+ema21 = ta.ema(close, 21)
+ema55 = ta.ema(close, 55)
+
+plot(ema21, color=color.green, title="EMA 21")
+plot(ema55, color=color.red, title="EMA 55")
+
+// ============================
+// 4. Volume Confirmation
+// ============================
+avgVolume = ta.sma(volume, 20)
+highVolume = volume > avgVolume * 1.5
+
+// ============================
+// 5. ATR - Dynamic Stop Loss
+// ============================
+atrValue = ta.atr(14)
+
+// ============================
+// 6. RSI - Avoid Overbought
+// ============================
+rsiValue = ta.rsi(close, 14)
+
+// ============================
+// BUY AND SELL CONDITIONS
+// ============================
+breakoutUp = ta.crossover(close, bbUpper)
+breakoutDown = ta.crossunder(close, bbLower)
+
+buyCondition = breakoutUp and (ema21 > ema55) and highVolume and (rsiValue < 75)
+sellCondition = breakoutDown or ta.crossunder(ema21, ema55) or (rsiValue > 80)
+
+// ============================
+// EXECUTE TRADES
+// ============================
+if (buyCondition)
+    strategy.entry("Buy", strategy.long)
+    strategy.exit("Exit", "Buy", stop = close - (atrValue * 2), limit = close + (atrValue * 5))
+
+if (sellCondition)
+    strategy.close("Buy")
+
+// ============================
+// HIGHLIGHT SQUEEZE ON CHART
+// ============================
+bgcolor(isSqueeze ? color.new(color.purple, 85) : na, title="Squeeze Zone")
