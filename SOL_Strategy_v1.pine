@@ -1,0 +1,71 @@
+// This Pine Script® code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © darriuschetty24
+
+//@version=6
+//@version=5
+strategy("SOL Recovery Strategy v1", overlay=true, default_qty_type=strategy.percent_of_equity, default_qty_value=10)
+
+// ============================
+// 1. EMA - Trend Direction
+// ============================
+fastEMA = ta.ema(close, 21)
+slowEMA = ta.ema(close, 55)
+
+plot(fastEMA, color=color.blue, title="Fast EMA 21")
+plot(slowEMA, color=color.red, title="Slow EMA 55")
+
+// ============================
+// 2. Stochastic RSI
+// ============================
+smoothK = 3
+smoothD = 3
+rsiLength = 14
+stochLength = 14
+
+rsiValue = ta.rsi(close, rsiLength)
+k = ta.sma(ta.stoch(rsiValue, rsiValue, rsiValue, stochLength), smoothK)
+d = ta.sma(k, smoothD)
+
+// ============================
+// 3. MACD
+// ============================
+[macdLine, signalLine, histogram] = ta.macd(close, 12, 26, 9)
+
+// ============================
+// 4. Bollinger Bands
+// ============================
+bbMiddle = ta.sma(close, 20)
+bbUpper = bbMiddle + 2 * ta.stdev(close, 20)
+bbLower = bbMiddle - 2 * ta.stdev(close, 20)
+
+plot(bbMiddle, color=color.yellow, title="BB Middle")
+plot(bbUpper, color=color.gray, title="BB Upper")
+plot(bbLower, color=color.gray, title="BB Lower")
+
+// ============================
+// 5. Volume
+// ============================
+avgVolume = ta.sma(volume, 20)
+highVolume = volume > avgVolume
+
+// ============================
+// 6. ATR - Wider stops for SOL
+// ============================
+atrValue = ta.atr(14)
+
+// ============================
+// BUY AND SELL CONDITIONS
+// ============================
+buyCondition = (fastEMA > slowEMA) and (k > d) and (k < 80) and (macdLine > signalLine) and (close > bbMiddle) and (highVolume == true)
+
+sellCondition = ta.crossunder(fastEMA, slowEMA) or (macdLine < signalLine)
+
+// ============================
+// EXECUTE TRADES
+// ============================
+if (buyCondition)
+    strategy.entry("Buy", strategy.long)
+    strategy.exit("Exit", "Buy", stop = close - (atrValue * 2.5), limit = close + (atrValue * 5))
+
+if (sellCondition)
+    strategy.close("Buy")
