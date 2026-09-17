@@ -1,0 +1,40 @@
+// This Pine Script® code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © darriuschetty24
+
+//@version=5
+strategy("Gold Strategy v1", overlay=true, default_qty_type=strategy.percent_of_equity, default_qty_value=10)
+
+// === INDICATORS ===
+
+// 1. EMAs (faster than SMA, better for Gold)
+fastEMA = ta.ema(close, 21)
+slowEMA = ta.ema(close, 55)
+
+// 2. RSI
+rsiValue = ta.rsi(close, 14)
+
+// 3. MACD
+[macdLine, signalLine, histogram] = ta.macd(close, 12, 26, 9)
+
+// 4. ATR (measures volatility for smarter stop loss)
+atrValue = ta.atr(14)
+
+// 5. Volume
+avgVolume = ta.sma(volume, 20)
+highVolume = volume > avgVolume
+
+// === PLOT LINES ===
+plot(fastEMA, color=color.blue, title="Fast EMA (21)")
+plot(slowEMA, color=color.red, title="Slow EMA (55)")
+
+// === BUY AND SELL CONDITIONS ===
+buyCondition = (fastEMA > slowEMA) and (rsiValue > 50) and (macdLine > signalLine) and (highVolume == true)
+sellCondition = ta.crossunder(fastEMA, slowEMA) or (macdLine < signalLine)
+
+// === EXECUTE TRADES ===
+if (buyCondition)
+    strategy.entry("Buy", strategy.long)
+    strategy.exit("Exit", "Buy", stop = close - (atrValue * 1.5), limit = close + (atrValue * 3))
+
+if (sellCondition)
+    strategy.close("Buy")
